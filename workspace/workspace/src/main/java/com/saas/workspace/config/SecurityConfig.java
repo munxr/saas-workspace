@@ -19,24 +19,26 @@ public class SecurityConfig {
     private JwtFilter jwtFilter;
 
     @Bean
-    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
-        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-
-        // ADD YOUR VERCEL URL HERE!
-        configuration.setAllowedOrigins(java.util.List.of(
-                "http://localhost:5173",
-                "https://saas-workspace-seven.vercel.app"
-        ));
-
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("*"));
-        configuration.setAllowCredentials(true); // Added this to ensure JWT tokens pass through correctly
-
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<org.springframework.web.filter.CorsFilter> customCorsFilter() {
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+        org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
 
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("http://localhost:5173");
+        config.addAllowedOrigin("https://saas-workspace-seven.vercel.app");
+        config.addAllowedOrigin("https://saas-workspace-seven.vercel.app/"); // Added trailing slash just in case
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+
+        source.registerCorsConfiguration("/**", config);
+
+        org.springframework.boot.web.servlet.FilterRegistrationBean<org.springframework.web.filter.CorsFilter> bean =
+                new org.springframework.boot.web.servlet.FilterRegistrationBean<>(new org.springframework.web.filter.CorsFilter(source));
+
+        // THIS IS THE MAGIC LINE: It forces this filter to run FIRST, completely bypassing Spring Security's blocks
+        bean.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
+        return bean;
+    }
     // ADD THIS: Tells Spring Boot to stop generating random developer passwords
     @Bean
     public UserDetailsService userDetailsService() {
@@ -46,16 +48,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(AbstractHttpConfigurer::disable) // Disable internal CORS, our new Highest Precedence filter handles it!
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Tell Spring to let ALL browser CORS preflight checks pass through
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 2. Fix the path mismatch! We will allow both /auth and /api/auth just to be safe
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
-
-                        // 3. Lock everything else down
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
