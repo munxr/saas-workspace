@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a custom axios instance
 const api = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL: 'https://saas-backend-pmrc.onrender.com',
 });
 
 // Automatically intercept every request and attach the JWT token if we have one
