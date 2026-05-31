@@ -49,8 +49,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Anyone can hit register/login
-                        .anyRequest().authenticated()                // Everything else locked
+                        // 1. Tell Spring to let ALL browser CORS preflight checks pass through
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Fix the path mismatch! We will allow both /auth and /api/auth just to be safe
+                        .requestMatchers("/api/auth/**", "/auth/**").permitAll()
+
+                        // 3. Lock everything else down
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
