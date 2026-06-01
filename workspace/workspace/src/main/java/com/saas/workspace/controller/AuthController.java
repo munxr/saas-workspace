@@ -6,9 +6,11 @@ import com.saas.workspace.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = {"http://localhost:5173", "https://saas-workspace-seven.vercel.app"})
 public class AuthController {
 
     @Autowired
